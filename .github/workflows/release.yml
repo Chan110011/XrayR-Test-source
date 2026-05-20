@@ -11,17 +11,7 @@ on:
         options:
           - 'false'
           - 'true'
-  push:
-    branches:
-      - main
-      - master
-    tags:
-      - 'v*'
-    paths:
-      - "**/*.go"
-      - "go.mod"
-      - "go.sum"
-      - ".github/workflows/*.yml"
+  # Push trigger disabled in this fork to avoid duplicate builds.
   pull_request:
     types: [ opened, synchronize, reopened ]
     paths:
