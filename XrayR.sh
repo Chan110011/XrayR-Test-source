@@ -257,7 +257,7 @@ show_log() {
 }
 
 install_bbr() {
-    bash <(curl -L -s https://raw.githubusercontent.com/chiakge/Linux-NetSpeed/main/tcp.sh)
+    bash <(curl -l -s https://raw.githubusercontent.com/byJoey/Actions-bbr-v3/refs/heads/main/install.sh)
     #if [[ $? == 0 ]]; then
     #    echo ""
     #    echo -e "${green}安装 bbr 成功，请重启服务器${plain}"
