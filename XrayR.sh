@@ -256,19 +256,122 @@ show_log() {
     fi
 }
 
-install_bbr() {
-    bash <(curl -l -s https://raw.githubusercontent.com/byJoey/Actions-bbr-v3/refs/heads/main/install.sh)
-    #if [[ $? == 0 ]]; then
-    #    echo ""
-    #    echo -e "${green}安装 bbr 成功，请重启服务器${plain}"
-    #else
-    #    echo ""
-    #    echo -e "${red}下载 bbr 安装脚本失败，请检查本机能否连接 Github${plain}"
-    #fi
+BBR_SYSCTL_FILE="/etc/sysctl.d/99-xrayr-bbr.conf"
 
-    #before_show_menu
+show_bbr_status() {
+    echo ""
+    echo -e "${green}BBR 状态信息${plain}"
+    echo "------------------------------------------"
+    echo -e "内核版本: $(uname -r)"
+
+    if [[ -f /proc/sys/net/ipv4/tcp_available_congestion_control ]]; then
+        echo -e "可用拥塞控制算法: $(cat /proc/sys/net/ipv4/tcp_available_congestion_control)"
+    else
+        echo -e "可用拥塞控制算法: ${red}无法读取${plain}"
+    fi
+
+    if [[ -f /proc/sys/net/ipv4/tcp_congestion_control ]]; then
+        echo -e "当前拥塞控制算法: $(cat /proc/sys/net/ipv4/tcp_congestion_control)"
+    else
+        echo -e "当前拥塞控制算法: ${red}无法读取${plain}"
+    fi
+
+    if [[ -f /proc/sys/net/core/default_qdisc ]]; then
+        echo -e "当前默认队列算法: $(cat /proc/sys/net/core/default_qdisc)"
+    else
+        echo -e "当前默认队列算法: ${red}无法读取${plain}"
+    fi
+
+    if sysctl net.ipv4.tcp_congestion_control 2>/dev/null | grep -q "bbr"; then
+        echo -e "BBR 启用状态: ${green}已启用${plain}"
+    else
+        echo -e "BBR 启用状态: ${yellow}未启用${plain}"
+    fi
+
+    if [[ -f "${BBR_SYSCTL_FILE}" ]]; then
+        echo -e "XrayR BBR 配置: ${green}${BBR_SYSCTL_FILE}${plain}"
+    else
+        echo -e "XrayR BBR 配置: ${yellow}未创建${plain}"
+    fi
+    echo "------------------------------------------"
 }
 
+check_bbr_supported() {
+    if [[ ! -f /proc/sys/net/ipv4/tcp_available_congestion_control ]]; then
+        echo -e "${red}无法检测当前系统支持的 TCP 拥塞控制算法${plain}"
+        return 1
+    fi
+
+    if ! grep -qw "bbr" /proc/sys/net/ipv4/tcp_available_congestion_control; then
+        echo -e "${red}当前内核不支持 BBR，请升级到支持 BBR 的内核后再试${plain}"
+        return 1
+    fi
+
+    return 0
+}
+
+enable_bbr() {
+    check_bbr_supported || return 1
+
+    cat > "${BBR_SYSCTL_FILE}" <<EOF
+net.core.default_qdisc=fq
+net.ipv4.tcp_congestion_control=bbr
+EOF
+
+    sysctl --system
+    if [[ $? == 0 ]]; then
+        echo -e "${green}BBR + fq 已开启${plain}"
+    else
+        echo -e "${red}应用 BBR 配置失败，请检查 sysctl 输出${plain}"
+    fi
+
+    show_bbr_status
+}
+
+disable_bbr() {
+    if [[ -f "${BBR_SYSCTL_FILE}" ]]; then
+        rm -f "${BBR_SYSCTL_FILE}"
+        sysctl --system
+        if [[ $? == 0 ]]; then
+            echo -e "${green}已删除 XrayR BBR 配置并重新加载 sysctl${plain}"
+        else
+            echo -e "${red}重新加载 sysctl 失败，请检查输出${plain}"
+        fi
+    else
+        echo -e "${yellow}未找到 XrayR BBR 配置文件，无需删除${plain}"
+    fi
+
+    show_bbr_status
+}
+
+bbr_menu() {
+    echo -e "
+  ${green}BBR 管理菜单${plain}
+------------------------------------------
+  ${green}1.${plain} 查看 BBR 状态
+  ${green}2.${plain} 开启 BBR + fq
+  ${green}3.${plain} 关闭 BBR 配置
+  ${green}0.${plain} 返回主菜单
+ "
+    echo && read -p "请输入选择 [0-3]: " bbr_num
+
+    case "${bbr_num}" in
+        1) show_bbr_status; before_show_menu
+        ;;
+        2) enable_bbr; before_show_menu
+        ;;
+        3) disable_bbr; before_show_menu
+        ;;
+        0) show_menu
+        ;;
+        *) echo -e "${red}请输入正确的数字 [0-3]${plain}"; bbr_menu
+        ;;
+    esac
+}
+
+install_bbr() {
+    bbr_menu
+}
 update_shell() {
     wget -O /usr/bin/XrayR -N --no-check-certificate https://raw.githubusercontent.com/Chan110011/XrayR-Test-source/main/XrayR.sh
     if [[ $? != 0 ]]; then
