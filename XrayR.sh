@@ -302,6 +302,10 @@ check_bbr_supported() {
         return 1
     fi
 
+    # Debian 将 BBR 作为 tcp_bbr 内核模块提供；先加载后再检测可用算法。
+    # BBR 被编进内核时 modprobe 可能返回非零，后续检测仍是最终依据。
+    modprobe tcp_bbr 2>/dev/null
+
     if ! grep -qw "bbr" /proc/sys/net/ipv4/tcp_available_congestion_control; then
         echo -e "${red}当前内核不支持 BBR，请升级到支持 BBR 的内核后再试${plain}"
         return 1
