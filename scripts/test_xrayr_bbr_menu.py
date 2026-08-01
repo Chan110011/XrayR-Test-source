@@ -31,7 +31,16 @@ def test_bbr_support_check_loads_kernel_module_before_detecting_bbr():
     )
 
 
+def test_bbr_status_returns_to_bbr_menu_after_enter():
+    text = SCRIPT.read_text(encoding="utf-8")
+    bbr_menu_body = text.split("\nbbr_menu() {", 1)[1].split("\n}", 1)[0]
+
+    assert "before_bbr_menu()" in text
+    assert "1) show_bbr_status; before_bbr_menu" in bbr_menu_body
+
+
 if __name__ == "__main__":
     test_bbr_menu_is_embedded_and_not_remote_runner()
     test_bbr_support_check_loads_kernel_module_before_detecting_bbr()
+    test_bbr_status_returns_to_bbr_menu_after_enter()
     print("ok")

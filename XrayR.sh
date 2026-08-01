@@ -83,6 +83,11 @@ before_show_menu() {
     show_menu
 }
 
+before_bbr_menu() {
+    echo && echo -n -e "${yellow}按回车返回 BBR 菜单: ${plain}" && read temp
+    bbr_menu
+}
+
 install() {
     bash <(curl -Ls https://raw.githubusercontent.com/Chan110011/XrayR-Test-source/main/install.sh)
     if [[ $? == 0 ]]; then
@@ -360,7 +365,7 @@ bbr_menu() {
     echo && read -p "请输入选择 [0-3]: " bbr_num
 
     case "${bbr_num}" in
-        1) show_bbr_status; before_show_menu
+        1) show_bbr_status; before_bbr_menu
         ;;
         2) enable_bbr; before_show_menu
         ;;
